@@ -9,5 +9,5 @@ roleRef:
   name: prometheus-scraper
 subjects:
 - kind: ServiceAccount
-  name: prometheus
+  name: data-science-prometheus
   namespace: redhat-ods-monitoring
