@@ -2,7 +2,7 @@
 kind: NetworkPolicy
 apiVersion: networking.k8s.io/v1
 metadata:
-  name: redhat-ods-applications
+  name: data-science-applications
   namespace: redhat-ods-applications
 spec:
   podSelector: {}
