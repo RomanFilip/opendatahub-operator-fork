@@ -3,7 +3,7 @@ kind: Deployment
 metadata:
   labels:
     app: prometheus
-  name: prometheus
+  name: data-science-prometheus
   namespace: redhat-ods-monitoring
 spec:
   replicas: 1
@@ -18,7 +18,7 @@ spec:
         alertmanager: <alertmanager_config_hash>
         prometheus: <prometheus_config_hash>
     spec:
-      serviceAccountName: prometheus
+      serviceAccountName: data-science-prometheus
       containers:
       - name: oauth-proxy
         args:
@@ -254,11 +254,11 @@ spec:
       # for prometheus container
       - name: prometheus-data
         persistentVolumeClaim:
-          claimName: prometheus-data
+          claimName: data-science-prometheus-data
       - name: prometheus-config
         configMap:
           defaultMode: 420
-          name: prometheus
+          name: data-science-prometheus-config
       - name: prometheus-service-ca
         configMap:
           name: prometheus-service-ca
@@ -270,11 +270,11 @@ spec:
       # for alertmanager container
       - name: alertmanager-data
         persistentVolumeClaim:
-          claimName: "alertmanager-data"
+          claimName: "data-science-alertmanager-data"
       - name: alertmanager-config
         configMap:
           defaultMode: 420
-          name: alertmanager
+          name: data-science-alertmanager-config
 
       # for oauth-proxy container
       - name: prometheus-tls

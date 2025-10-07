@@ -2,7 +2,7 @@
 kind: NetworkPolicy
 apiVersion: networking.k8s.io/v1
 metadata:
-  name: redhat-ods-operator
+  name: data-science-operator
   namespace: redhat-ods-operator
 spec:
   podSelector:
