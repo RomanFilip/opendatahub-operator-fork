@@ -609,6 +609,9 @@ func TestMain(m *testing.M) {
 	pflag.Bool("test-dag-ordering", true, "run DAG upgrade ordering tests")
 	checkEnvVarBindingError(viper.BindEnv("test-dag-ordering", viper.GetEnvPrefix()+"_DAG_ORDERING"))
 
+	pflag.String("olm-version", "v0", "OLM version to use for operator installation: v0 or v1")
+	checkEnvVarBindingError(viper.BindEnv("olm-version", viper.GetEnvPrefix()+"_OLM_VERSION"))
+
 	pflag.Bool("circuit-breaker", true, "enable circuit breaker to halt tests on infrastructure failures")
 	checkEnvVarBindingError(viper.BindEnv("circuit-breaker", viper.GetEnvPrefix()+"_CIRCUIT_BREAKER"))
 	pflag.Int("circuit-breaker-threshold", 3, "consecutive test failures before health-checking for infrastructure problems")

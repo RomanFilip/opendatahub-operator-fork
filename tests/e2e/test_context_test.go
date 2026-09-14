@@ -16,6 +16,7 @@ import (
 	ofapi "github.com/operator-framework/api/pkg/operators/v1alpha1"
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
+	rbacv1 "k8s.io/api/rbac/v1"
 	apiextv1 "k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1"
 	k8serr "k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/api/meta"
@@ -1073,6 +1074,87 @@ func (tc *TestContext) ensureInstallPlan(nn types.NamespacedName, channelName st
 	}).WithTimeout(tc.TestTimeouts.olmOperationTimeout).
 		WithPolling(tc.TestTimeouts.defaultEventuallyPollInterval).
 		Should(Succeed())
+}
+
+// EnsureOperatorInstalledViaClusterExtension installs an operator via OLMv1 ClusterExtension
+// and waits for the Installed condition to become True.
+//
+//   - nn.Name      = OLM package name (also ClusterExtension resource name)
+//   - nn.Namespace = install namespace (where operator pods land)
+//   - channel      = OLM channel (e.g. "stable-v1.4")
+func (tc *TestContext) EnsureOperatorInstalledViaClusterExtension(nn types.NamespacedName, channel string) {
+	tc.ensureClusterExtensionSAExists(nn)
+	tc.ensureClusterExtensionInstalled(nn, channel)
+	tc.ensureClusterExtensionReady(nn.Name)
+}
+
+// ensureClusterExtensionSAExists creates the ServiceAccount and ClusterRoleBinding required
+// by ClusterExtension.spec.serviceAccount (mandatory in operator-controller v1.7.0 / OCP 4.20).
+// ponytail: cluster-admin; spec.serviceAccount removed in operator-controller v1.11 (OCP 4.22+), drop SA + CRB then.
+func (tc *TestContext) ensureClusterExtensionSAExists(nn types.NamespacedName) {
+	tc.EventuallyResourceCreatedOrUpdated(
+		WithMinimalObject(gvk.Namespace, types.NamespacedName{Name: nn.Namespace}),
+	)
+	saName := "olmv1-installer-" + nn.Name
+	tc.EventuallyResourceCreatedOrUpdated(
+		WithObjectToCreate(&corev1.ServiceAccount{
+			ObjectMeta: metav1.ObjectMeta{Name: saName, Namespace: nn.Namespace},
+		}),
+	)
+	tc.EventuallyResourceCreatedOrUpdated(
+		WithObjectToCreate(&rbacv1.ClusterRoleBinding{
+			ObjectMeta: metav1.ObjectMeta{Name: "olmv1-installer-" + nn.Name},
+			RoleRef:    rbacv1.RoleRef{APIGroup: "rbac.authorization.k8s.io", Kind: "ClusterRole", Name: "cluster-admin"},
+			Subjects:   []rbacv1.Subject{{Kind: "ServiceAccount", Name: saName, Namespace: nn.Namespace}},
+		}),
+	)
+}
+
+// ensureClusterExtensionInstalled creates a ClusterExtension for the given operator.
+// Fetch-first: spec.namespace and spec.serviceAccount.name are immutable (CEL self == oldSelf).
+// EventuallyResourceCreatedOrUpdated must not be used when the resource may already exist.
+func (tc *TestContext) ensureClusterExtensionInstalled(nn types.NamespacedName, channel string) {
+	if existing, err := fetchResourceSync(tc.NewResourceOptions(
+		WithMinimalObject(gvk.ClusterExtension, types.NamespacedName{Name: nn.Name}),
+	)); err == nil && existing != nil {
+		return
+	}
+	tc.EventuallyResourceCreatedOrUpdated(
+		WithObjectToCreate(&unstructured.Unstructured{
+			Object: map[string]any{
+				"apiVersion": "olm.operatorframework.io/v1",
+				"kind":       "ClusterExtension",
+				"metadata":   map[string]any{"name": nn.Name},
+				"spec": map[string]any{
+					"namespace":      nn.Namespace,
+					"serviceAccount": map[string]any{"name": "olmv1-installer-" + nn.Name},
+					"source": map[string]any{
+						"sourceType": "Catalog",
+						"catalog": map[string]any{
+							"packageName": nn.Name,
+							"channels":    []any{channel},
+							"selector": map[string]any{
+								"matchLabels": map[string]any{
+									"olm.operatorframework.io/metadata.name": "openshift-redhat-operators",
+								},
+							},
+						},
+					},
+				},
+			},
+		}),
+		WithCustomErrorMsg("Failed to create ClusterExtension '%s'", nn.Name),
+	)
+}
+
+// ensureClusterExtensionReady waits for the ClusterExtension to report Installed=True.
+func (tc *TestContext) ensureClusterExtensionReady(name string) {
+	tc.EnsureResourceExists(
+		WithMinimalObject(gvk.ClusterExtension, types.NamespacedName{Name: name}),
+		WithCondition(jq.Match(`.status.conditions[] | select(.type == "Installed") | .status == "True"`)),
+		WithCustomErrorMsg("ClusterExtension '%s' did not reach Installed=True", name),
+		WithEventuallyTimeout(tc.TestTimeouts.olmOperationTimeout),
+	)
 }
 
 // registerCleanup registers a t.Cleanup() handler that deletes a resource when the test completes.
