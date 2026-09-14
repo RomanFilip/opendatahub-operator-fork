@@ -1049,4 +1049,12 @@ var (
 		Version: "v1beta2",
 		Kind:    "ScheduledSparkApplication",
 	}
+
+	// olm.operatorframework.io.
+
+	ClusterExtension = schema.GroupVersionKind{
+		Group:   "olm.operatorframework.io",
+		Version: "v1",
+		Kind:    "ClusterExtension",
+	}
 )
