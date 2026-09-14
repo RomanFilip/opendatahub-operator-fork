@@ -74,10 +74,17 @@ func (tc *KueueTestCtx) ensureKueueOperatorsInstalled(t *testing.T) {
 	t.Helper()
 
 	t.Logf("Ensuring LWS Operator is installed (namespace=%s, name=%s).", leaderWorkerSetNamespace, leaderWorkerSetOpName)
-	tc.EnsureOperatorInstalledWithGlobalOperatorGroupAndChannel(
-		types.NamespacedName{Name: leaderWorkerSetOpName, Namespace: leaderWorkerSetNamespace},
-		leaderWorkerSetChannel,
-	)
+	if useOLMv1() {
+		tc.EnsureOperatorInstalledViaClusterExtension(
+			types.NamespacedName{Name: leaderWorkerSetOpName, Namespace: leaderWorkerSetNamespace},
+			leaderWorkerSetChannel,
+		)
+	} else {
+		tc.EnsureOperatorInstalledWithGlobalOperatorGroupAndChannel(
+			types.NamespacedName{Name: leaderWorkerSetOpName, Namespace: leaderWorkerSetNamespace},
+			leaderWorkerSetChannel,
+		)
+	}
 
 	t.Logf("Ensuring LeaderWorkerSetOperator CR exists (namespace=%s, name=cluster).", leaderWorkerSetNamespace)
 	tc.EventuallyResourceCreatedOrUpdated(
@@ -88,10 +95,17 @@ func (tc *KueueTestCtx) ensureKueueOperatorsInstalled(t *testing.T) {
 	)
 
 	t.Logf("Ensuring OCP Kueue Operator is installed (namespace=%s, name=%s).", kueueOcpOperatorNamespace, kueueOpName)
-	tc.EnsureOperatorInstalledWithGlobalOperatorGroupAndChannel(
-		types.NamespacedName{Name: kueueOpName, Namespace: kueueOcpOperatorNamespace},
-		kueueOcpOperatorChannel,
-	)
+	if useOLMv1() {
+		tc.EnsureOperatorInstalledViaClusterExtension(
+			types.NamespacedName{Name: kueueOpName, Namespace: kueueOcpOperatorNamespace},
+			kueueOcpOperatorChannel,
+		)
+	} else {
+		tc.EnsureOperatorInstalledWithGlobalOperatorGroupAndChannel(
+			types.NamespacedName{Name: kueueOpName, Namespace: kueueOcpOperatorNamespace},
+			kueueOcpOperatorChannel,
+		)
+	}
 }
 
 func kueueTestSuite(t *testing.T) {
