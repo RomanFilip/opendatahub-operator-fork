@@ -17,7 +17,6 @@ import (
 
 	gTypes "github.com/onsi/gomega/types"
 	operatorv1 "github.com/openshift/api/operator/v1"
-	"github.com/spf13/viper"
 	"github.com/stretchr/testify/require"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -108,6 +107,7 @@ type Operator struct {
 	skipOperatorGroup   bool
 	globalOperatorGroup bool
 	channel             string
+	useOLMv1            bool
 }
 
 // TestCaseOpts defines a function type that can be used to modify how individual test cases are executed.
@@ -513,18 +513,6 @@ func defaultErrorMessageIfNone(format string, formatArgs []any, args []any) []an
 	return args
 }
 
-// useOLMv1 reports whether the OLMv1 install path is requested.
-// Set E2E_TEST_OLM_VERSION=v1 (or --olm-version=v1) to enable.
-// OLMv0 and OLMv1 coexist on all OCP 4.18+ clusters — the switch must be
-// explicit; a CRD probe would return true on every CI run.
-func useOLMv1() bool {
-	v := viper.GetString("olm-version")
-	if v != "v0" && v != "v1" {
-		panic(fmt.Sprintf("E2E_TEST_OLM_VERSION must be v0 or v1, got: %q", v))
-	}
-	return v == "v1"
-}
-
 // ParseTestFlags Parses go test flags separately because pflag package ignores flags with '-test.' prefix
 // Related issues:
 // https://github.com/spf13/pflag/issues/63
@@ -555,7 +543,7 @@ func (tc *TestContext) ensureOperatorsAreInstalled(t *testing.T, operators []Ope
 			name: fmt.Sprintf("Ensure %s is installed", op.nn.Name),
 			testFn: func(t *testing.T) {
 				t.Helper()
-				if useOLMv1() {
+				if op.useOLMv1 {
 					tc.EnsureOperatorInstalledViaClusterExtension(op.nn, op.channel)
 				} else {
 					switch {
