@@ -1088,6 +1088,11 @@ func (tc *TestContext) EnsureOperatorInstalledViaClusterExtension(nn types.Names
 	tc.ensureClusterExtensionReady(nn.Name)
 }
 
+// clusterExtensionSAName returns the ServiceAccount / ClusterRoleBinding name for a ClusterExtension installer.
+func clusterExtensionSAName(packageName string) string {
+	return "olmv1-installer-" + packageName
+}
+
 // ensureClusterExtensionSAExists creates the ServiceAccount and ClusterRoleBinding required
 // by ClusterExtension.spec.serviceAccount (mandatory in operator-controller v1.7.0 / OCP 4.20).
 // ponytail: cluster-admin; spec.serviceAccount removed in operator-controller v1.11 (OCP 4.22+), drop SA + CRB then.
@@ -1095,7 +1100,7 @@ func (tc *TestContext) ensureClusterExtensionSAExists(nn types.NamespacedName) {
 	tc.EventuallyResourceCreatedOrUpdated(
 		WithMinimalObject(gvk.Namespace, types.NamespacedName{Name: nn.Namespace}),
 	)
-	saName := "olmv1-installer-" + nn.Name
+	saName := clusterExtensionSAName(nn.Name)
 	tc.EventuallyResourceCreatedOrUpdated(
 		WithObjectToCreate(&corev1.ServiceAccount{
 			ObjectMeta: metav1.ObjectMeta{Name: saName, Namespace: nn.Namespace},
@@ -1103,7 +1108,7 @@ func (tc *TestContext) ensureClusterExtensionSAExists(nn types.NamespacedName) {
 	)
 	tc.EventuallyResourceCreatedOrUpdated(
 		WithObjectToCreate(&rbacv1.ClusterRoleBinding{
-			ObjectMeta: metav1.ObjectMeta{Name: "olmv1-installer-" + nn.Name},
+			ObjectMeta: metav1.ObjectMeta{Name: saName},
 			RoleRef:    rbacv1.RoleRef{APIGroup: "rbac.authorization.k8s.io", Kind: "ClusterRole", Name: "cluster-admin"},
 			Subjects:   []rbacv1.Subject{{Kind: "ServiceAccount", Name: saName, Namespace: nn.Namespace}},
 		}),
@@ -1114,9 +1119,13 @@ func (tc *TestContext) ensureClusterExtensionSAExists(nn types.NamespacedName) {
 // Fetch-first: spec.namespace and spec.serviceAccount.name are immutable (CEL self == oldSelf).
 // EventuallyResourceCreatedOrUpdated must not be used when the resource may already exist.
 func (tc *TestContext) ensureClusterExtensionInstalled(nn types.NamespacedName, channel string) {
-	if existing, err := fetchResourceSync(tc.NewResourceOptions(
+	existing, err := fetchResourceSync(tc.NewResourceOptions(
 		WithMinimalObject(gvk.ClusterExtension, types.NamespacedName{Name: nn.Name}),
-	)); err == nil && existing != nil {
+	))
+	if meta.IsNoMatchError(err) {
+		tc.g.Expect(err).NotTo(HaveOccurred(), "ClusterExtension CRD not installed — is OLMv1 running on this cluster?")
+	}
+	if err == nil && existing != nil {
 		return
 	}
 	tc.EventuallyResourceCreatedOrUpdated(
@@ -1127,7 +1136,7 @@ func (tc *TestContext) ensureClusterExtensionInstalled(nn types.NamespacedName, 
 				"metadata":   map[string]any{"name": nn.Name},
 				"spec": map[string]any{
 					"namespace":      nn.Namespace,
-					"serviceAccount": map[string]any{"name": "olmv1-installer-" + nn.Name},
+					"serviceAccount": map[string]any{"name": clusterExtensionSAName(nn.Name)},
 					"source": map[string]any{
 						"sourceType": "Catalog",
 						"catalog": map[string]any{
