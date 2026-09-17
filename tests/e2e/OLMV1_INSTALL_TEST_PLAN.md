@@ -147,14 +147,32 @@ must be manually deleted before re-running.
 
 ---
 
+## Cluster Compatibility Note (discovered 2026-09-17)
+
+Tested on OCP 4.20 with `redhat-operator-index:v4.20`. The ClusterExtension is created
+correctly (right `spec.namespace`, SA, CRB, catalog selector). However, OLMv1
+operator-controller on this cluster version does not properly propagate `spec.namespace`
+to the bundle renderer for operators that only support `OwnNamespace` install mode —
+the renderer receives empty target namespaces `[]` and rejects the bundle.
+
+**Implication:** `useOLMv1: true` must only be set on operators that declare
+`AllNamespaces` install mode in their CSV. Neither `leader-worker-set` nor `job-set`
+qualify (both are OwnNamespace only).
+
+Pre-flight check to add before tagging an operator:
+```bash
+# Confirm the CSV declares AllNamespaces install mode
+kubectl get csv <name> -n <namespace> -o json \
+  | jq '.spec.installModes[] | select(.type=="AllNamespaces") | .supported'
+# must return: true
+```
+
 ## Remaining Work (prerequisite for scenarios 1 and 2)
 
-- [ ] Confirm `leaderWorkerSet` and `jobSet` packages exist in `openshift-redhat-operators`
-      catalog:
-      ```bash
-      kubectl get clustercatalog openshift-redhat-operators -o json | jq '.status'
-      ```
-- [ ] Tag one operator in `creation_test.go` with `useOLMv1: true`
+- [ ] Identify an AllNamespaces-capable operator in `openshift-redhat-operators` catalog
+      that is not already installed via OLMv0 in the test suite
+- [ ] Tag that operator in `creation_test.go` with `useOLMv1: true`
 - [ ] Run scenario 1 to validate end-to-end
+- [ ] Alternatively: re-test on OCP 4.22+ where OLMv1 OwnNamespace support is expected
 
 Scenario 3 (OLMv0 regression) and scenarios 4–5 (static checks) run without any remaining work.
