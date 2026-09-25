@@ -14,7 +14,8 @@ package datasciencecluster
 // +kubebuilder:rbac:groups="operators.coreos.com",resources=subscriptions,verbs=get;list;watch;delete
 // +kubebuilder:rbac:groups="operators.coreos.com",resources=operatorconditions,verbs=get;list;watch
 // +kubebuilder:rbac:groups="operators.coreos.com",resources=catalogsources,verbs=get;list;watch
-// +kubebuilder:rbac:groups="olm.operatorframework.io",resources=clusterextensions,verbs=get;list;watch
+// +kubebuilder:rbac:groups="olm.operatorframework.io",resources=clusterextensions,verbs=get;list;watch;delete
+// +kubebuilder:rbac:groups="olm.operatorframework.io",resources=clustercatalogs,verbs=get;list;watch
 
 // +kubebuilder:rbac:groups="apiextensions.k8s.io",resources=customresourcedefinitions,verbs=get;list;watch;create;patch;delete;update
 
@@ -195,25 +196,10 @@ package datasciencecluster
 // +kubebuilder:rbac:groups=metrics.k8s.io,resources=pods;nodes,verbs=get;list;watch
 // +kubebuilder:rbac:groups="apps",resources=daemonsets,verbs=get;list;watch;create;update;patch;delete
 
-// DataSciencePipelines
-// +kubebuilder:rbac:groups=components.platform.opendatahub.io,resources=datasciencepipelines,verbs=get;list;watch;create;update;patch;delete
-// +kubebuilder:rbac:groups=components.platform.opendatahub.io,resources=datasciencepipelines/status,verbs=get;update;patch
-// +kubebuilder:rbac:groups=components.platform.opendatahub.io,resources=datasciencepipelines/finalizers,verbs=update
-// +kubebuilder:rbac:groups="datasciencepipelinesapplications.opendatahub.io",resources=datasciencepipelinesapplications/status,verbs=update;patch;get
-// +kubebuilder:rbac:groups="datasciencepipelinesapplications.opendatahub.io",resources=datasciencepipelinesapplications/finalizers,verbs=update;patch;get
-// +kubebuilder:rbac:groups="datasciencepipelinesapplications.opendatahub.io",resources=datasciencepipelinesapplications,verbs=create;delete;list;update;watch;patch;get
-// Argo workflows for data science pipelines
-// +kubebuilder:rbac:groups="argoproj.io",resources=workflows,verbs=get;list;watch;create;update;patch;delete
-
 // ModelMeshServing
 // +kubebuilder:rbac:groups=components.platform.opendatahub.io,resources=modelmeshservings,verbs=get;list;watch;create;update;patch;delete
 // +kubebuilder:rbac:groups=components.platform.opendatahub.io,resources=modelmeshservings/status,verbs=get;update;patch
 // +kubebuilder:rbac:groups=components.platform.opendatahub.io,resources=modelmeshservings/finalizers,verbs=update
-
-// TrustyAI
-// +kubebuilder:rbac:groups=components.platform.opendatahub.io,resources=trustyais,verbs=get;list;watch;create;update;patch;delete
-// +kubebuilder:rbac:groups=components.platform.opendatahub.io,resources=trustyais/status,verbs=get;update;patch
-// +kubebuilder:rbac:groups=components.platform.opendatahub.io,resources=trustyais/finalizers,verbs=update
 
 // +kubebuilder:rbac:groups="policy",resources=poddisruptionbudgets,verbs=get;list;watch;create;update;patch;delete
 
